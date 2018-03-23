@@ -1,0 +1,355 @@
+
+get_Rversion_from_path = function( path ){
+
+  pos = regexec( 'R-\\d+\\.\\d+\\.\\d+', path )[[1]]
+
+  start = pos[[1]] + 2
+
+  end = attributes(pos)$match.length + start
+
+  R_vers = substr(path, start = start, stop = end )
+
+  if( R_vers == '' ){
+    stop( paste('could not extract R version from', path,'. Make sure folder name has standard annotation R-X.X.X') )
+  }
+
+  is_program_files_folder_in_path = grepl( 'Program Files', path )
+
+  if( is_program_files_folder_in_path ){
+    stop( paste( path, ', R seems to be installed in System folder "Program Files". Please install R outside system folders to avoid access rights conflicts') )
+  }
+
+  return(R_vers)
+}
+
+get_user_input = function(){
+
+  # check internet ---------------------------------------------------------
+  can_internet = check_internet()
+
+  #get paths ---------------------------------------------------------------
+  path_new = choose.dir(caption = 'pick directory of new R installation')
+  path_new = normalizePath(path_new)
+
+  path_old = choose.dir(caption = 'pick directory of old R installation', default = path_new)
+  path_old = normalizePath(path_old)
+
+  print( 'Enter `d` if unsure about environment' )
+  input = readline( prompt = 'Server or Desktop environment ( S | D ):' )
+
+  # server or desktop ------------------------------------------------------
+  if( (input == 's' | input == 'S') ){
+
+    if( can_internet ) stop('internet connection detected cannot be a server environment')
+
+    server = T
+    miniCRAN = T
+
+  }else if(input == 'd' | input == 'D'){
+    server = F
+    miniCRAN = F
+  }else{
+    stop( paste0('input: "', input, '" is invalid') )
+  }
+
+  # miniCRAN------------------------------------------------------------------
+
+  if( ! server ){
+
+    print( 'if unsure select `N` ' )
+
+    input = readline( prompt = 'Are you using miniCRAN ( Y | N ):' )
+
+    if( (input == 'y' | input == 'Y') ){
+      miniCRAN = T
+    }else if(input == 'n' | input == 'N'){
+      miniCRAN = F
+    }else{
+      stop( paste0('input: "', input, '" is invalid') )
+    }
+
+  }
+
+
+  if( miniCRAN ){
+
+    path_miniCRAN = choose.dir( caption = 'pick miniCRAN directory')
+
+    if( any( ! dir(path_miniCRAN) %in% c('bin','src')  ) ){
+      stop( paste( path_miniCRAN, 'does not appear to be a valid miniCRAN repository') )
+    }
+
+  }else{
+    path_miniCRAN = NULL
+  }
+
+  # get libraries and R versions----------------------------------------
+
+  libs_new = dir( file.path( path_new, 'library' ) )
+
+  libs_old = dir( file.path( path_old, 'library' ) )
+
+  R_vers_run = paste( getRversion(), collapse = '.' )
+
+  R_vers_new = get_Rversion_from_path( path_new )
+
+  R_vers_old = get_Rversion_from_path( path_old )
+
+  # print----------------------------------------------------------------
+
+  print( paste('new R version:', R_vers_new) )
+  print( paste('old R version:', R_vers_old) )
+  print( paste('running R version:', R_vers_run) )
+  print( paste('server environment:', server) )
+  print( paste('internet connection:', can_internet) )
+
+  # checks ------------------------------------------------------------------------
+
+  if( compareVersion( R_vers_new, R_vers_old) < 0 ){
+    stop( paste( 'new R version', R_vers_new,' is lower than old R version', R_vers_old ) )
+  }
+
+  if( length(libs_old) < length(libs_new) ){
+    stop('old R installation has fewer packages installed than new R installation')
+  }
+
+  if( any( ! libs_new %in% libs_old ) ){
+
+    libs_no_match = libs_new[ ! libs_new %in% libs_new ]
+    libs_no_match = paste( libs_no_match, collapse = ', ')
+
+    stop( paste( libs_no_match, 'found in new installation but not in old installation') )
+  }
+
+  # returns ------------------------------------------------------------------------
+
+  dir_ls = list( path_new        = path_new
+                 , path_old      = path_old
+                 , path_miniCRAN = path_miniCRAN
+                 , libs_new      = libs_new
+                 , libs_old      = libs_old
+                 , R_vers_run    = R_vers_run
+                 , R_vers_new    = R_vers_new
+                 , R_vers_old    = R_vers_old
+                 , server        = server
+                 , can_internet  = can_internet
+                 , miniCRAN      = miniCRAN )
+
+  return( dir_ls )
+
+}
+
+update_from_old_inst = function( dir_ls = get_user_input() ){
+
+  path_new      = dir_ls$path_new
+  path_old      = dir_ls$path_old
+  path_miniCRAN = dir_ls$path_miniCRAN
+  libs_new      = dir_ls$libs_new
+  libs_old      = dir_ls$libs_old
+  R_vers_run    = dir_ls$R_vers_run
+  R_vers_new    = dir_ls$R_vers_new
+  R_vers_old    = dir_ls$R_vers_old
+  server        = dir_ls$server
+  can_internet  = dir_ls$can_internet
+  miniCRAN      = dir_ls$miniCRAN
+
+  # checks ------------------------------------------------------------------------
+
+  if( R_vers_run != R_vers_old ){
+    stop( 'run update_from_old_inst() on old R version' )
+  }
+
+  # copy libraries ----------------------------------------------------------------
+
+  copy = function( folder ){
+
+    print( paste('copying', folder) )
+
+    file.copy( from = file.path( path_old, 'library', folder )
+               , to = file.path( path_new, 'library' )
+               , recursive = T
+               )
+
+  }
+
+  folders = libs_old[ ! libs_old %in% libs_new ]
+
+  if( length(folders) > 0 ){
+
+    apply( data.frame( folders = folders ), 1, copy )
+
+    print('all libraries copied')
+
+  }
+
+  # correct .libPaths---------------------------------------------------------------
+
+  print( 'correcting .libPaths() in Rprofile.site' )
+
+  rprofile_new = file.path( path_new, 'etc', 'Rprofile.site')
+  rprofile_new = normalizePath(rprofile_new)
+
+  append_string = paste0( '.libPaths( "'
+                          , normalizePath( file.path( path_new, 'library'),winslash = '/' )
+                          , '" )'  )
+
+
+  write( x = append_string
+         , file = rprofile_new
+         , append = T )
+
+  # miniCRAN ------------------------------------------------------------------------
+
+  if( can_internet == F & server == F ){
+
+    warning( 'no internet connection detected' )
+
+  }
+
+  if( can_internet == F & server == T ){
+
+    print( paste('setting', path_miniCRAN, 'as only CRAN repository in Rprofile.site') )
+
+    append_string = paste0( 'options( repos = "'
+                           , c( miniCRAN = paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') ) )
+                           , '" )' )
+
+    write( x = append_string
+           , file = rprofile_new
+           , append = T )
+
+
+    print( paste('archiving miniCRAN') )
+
+    path_miniCRAN_archive = paste0( 'c:/miniCRAN-',R_vers_old )
+
+    if( ! dir.exists(path_miniCRAN_archive) ){
+
+      dir.create( path_miniCRAN_archive )
+
+      file.copy( from = path_miniCRAN
+                 , to = path_miniCRAN_archive
+                 , recursive = T)
+
+      print( paste('miniCRAN archived at', path_miniCRAN_archive) )
+
+    }else{
+
+      warning('miniCRAN archive for R-', R_vers_old , 'already exists')
+
+    }
+
+
+  }
+
+}
+
+
+update_new_inst = function( dir_ls = get_user_input() ){
+
+  path_new      = dir_ls$path_new
+  path_old      = dir_ls$path_old
+  path_miniCRAN = dir_ls$path_miniCRAN
+  libs_new      = dir_ls$libs_new
+  libs_old      = dir_ls$libs_old
+  R_vers_run    = dir_ls$R_vers_run
+  R_vers_new    = dir_ls$R_vers_new
+  R_vers_old    = dir_ls$R_vers_old
+  server        = dir_ls$server
+  can_internet  = dir_ls$can_internet
+  miniCRAN      = dir_ls$miniCRAN
+
+  # checks ------------------------------------------------------------------------
+
+  can_internet = check_internet()
+
+  check_libPaths()
+
+  if( check_RStudio() ){
+    stop('do not run update_new_inst() from inside RStudio')
+  }
+
+  if( check_no_of_tasks() > 1 ){
+    stop( paste(check_no_of_tasks(), 'Rsessions are currently running. You can only have on Rsession running.') )
+  }
+
+  repos = getOption('repos')
+  no_repos = length(repos)
+  miniCRAN_in_repos = 'miniCRAN' %in% names(repos)
+
+  if( server & ( no_repos > 1 | miniCRAN_in_repos == F ) ){
+    stop( paste('miniCRAN has to be only CRAN repository. repos:', repos ) )
+  }
+
+  if( server == F & miniCRAN_in_repos == T ){
+    stop( paste('miniCRAN should not be a registered CRAN repository. repos:', repos ) )
+  }
+
+
+  # update packages -------------------------------------------------------------------------
+
+  print( paste( 'updating packages from', repos[1] ))
+
+  n_libs_new_before = length( libs_new )
+
+  update.packages( ask = F )
+
+  n_libs_new_after =  length( dir( file.path(path_new, 'library') ) )
+
+  if( n_libs_new_before != n_libs_new_after ){
+    stop( 'some libraries were deleted during the update process')
+  }else{
+    print( paste( 'update from', repos[1], 'successfull' ))
+  }
+
+  # miniCRAN ----------------------------------------------------------------------------------
+
+  if( miniCRAN ){
+
+    pkg_loc  = installed.packages()[,c(1,3)]
+    pkg_loc  = as.data.frame(pkg_loc)
+
+    pkg_cran = miniCRAN::pkgAvail()[,c(1,2)]
+    pkg_cran = as.data.frame(pkg_cran)
+
+    pkg_add  = pkg_loc$Package[ ! pkg_loc$Package %in% pkg_cran$Package ]
+
+    if( server == F ){
+
+      # save options
+      op = options()
+
+      CRAN_repos = repos[[1]]
+
+      # set miniCRAN as only repository
+      miniCRAN_repos = c( miniCRAN = paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') ) )
+      options( repos = miniCRAN_repos )
+
+
+      print('Adding packages to miniCRAN, will fail for packages not on CRAN such as packages included in base R')
+
+      miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'win.binary', deps = F)
+      miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source' , deps = F)
+
+      options(op)
+
+      print('miniCRAN has been updated. Copy paste miniCRAN directory to server')
+
+    }
+
+    if( server == T ){
+
+      print( 'installing missing packages from miniCRAN' )
+
+      install.packages(pkg_add$Package)
+
+      print( paste( length(pkg_add), 'packages installed') )
+
+    }
+
+  }
+
+}
+
+
+
