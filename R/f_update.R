@@ -377,29 +377,33 @@ update_new_inst = function( dir_ls = get_user_input() ){
     pkg_loc  = installed.packages()[,c(1,3)]
     pkg_loc  = as.data.frame(pkg_loc)
 
-    pkg_cran = miniCRAN::pkgAvail( repos = miniCRAN_repos)[,c(1,2)]
-    pkg_cran = as.data.frame(pkg_cran)
-    row.names(pkg_cran) <- NULL
+    pkg_miniCRAN = miniCRAN::pkgAvail( repos = miniCRAN_repos)[,c(1,2)]
+    pkg_miniCRAN = as.data.frame(pkg_miniCRAN)
+    row.names(pkg_miniCRAN) <- NULL
 
-
+    pkg_CRAN = miniCRAN::pkgAvail( repos = CRAN_repos)[,c(1,2)]
+    pkg_CRAN = as.data.frame(pkg_CRAN)
+    row.names(pkg_CRAN) <- NULL
 
     if( server == F ){
 
-      pkg_add = pkg_loc[ ! pkg_loc$Package %in% pkg_cran$Package,  ]
+      pkg_add = pkg_loc[ ! pkg_loc$Package %in% pkg_miniCRAN$Package,  ]
+      pkg_add = pkg_add[ pkg_add %in% pkg_CRAN$Package ]
 
-      # save options
-      op = options()
+      if( nrow(pkg_add) > 0 ){
 
-      # set miniCRAN as only repository
+        print('Adding packages to miniCRAN')
 
-      print('Adding packages to miniCRAN, will fail for packages not on CRAN such as packages included in base R')
+        miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'win.binary', deps = F)
+        miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source', deps = F)
 
-      miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'win.binary', deps = F)
-      miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source', deps = F)
+        miniCRAN::updatePackages( path = path_miniCRAN, repos = CRAN_repos, ask = F )
 
-      miniCRAN::updatePackages( path = path_miniCRAN, repos = CRAN_repos, ask = F )
+        print('miniCRAN has been updated. Copy paste miniCRAN directory to server, consider running update_from_old_inst() on server before to archive miniCRAN.')
 
-      print('miniCRAN has been updated. Copy paste miniCRAN directory to server, consider running update_from_old_inst() first, so old miniCRAN will be archived if applicable.')
+      }else{
+        print('miniCRAN is already up-to-date')
+      }
 
     }
 
@@ -453,10 +457,16 @@ create_miniCRAN = function( overwrite = F
     stop( paste( options('repos')[[1]], "no online CRAN repository found" ) )
   }
 
-  pkg = installed.packages()[,1]
+  pkg_inst = installed.packages()[,1]
 
-  miniCRAN::makeRepo( pkg, path, CRAN_repos, type = 'source')
-  miniCRAN::makeRepo( pkg, path, CRAN_repos, type = 'win.binary')
+  pkg_CRAN = miniCRAN::pkgAvail( repos = CRAN_repos)[,c(1,2)]
+  pkg_CRAN = as.data.frame(pkg_CRAN)
+  row.names(pkg_CRAN) <- NULL
+
+  pkg_add = pkg_inst[ pkg_inst %in% pkg_CRAN$Package ]
+
+  miniCRAN::makeRepo( pkg_add, path, CRAN_repos, type = 'source')
+  miniCRAN::makeRepo( pkg_add, path, CRAN_repos, type = 'win.binary')
 
   options(op)
 
