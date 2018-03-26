@@ -350,6 +350,9 @@ update_new_inst = function( dir_ls = get_user_input() ){
     stop( paste('miniCRAN should not be a registered CRAN repository. repos:', repos ) )
   }
 
+  if( R_vers_new != R_vers_run ){
+    stop('update_new_inst() has to be called from new R installation')
+  }
 
   # update packages -------------------------------------------------------------------------
 
