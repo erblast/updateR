@@ -2,26 +2,20 @@
 % Please edit documentation in R/f_check.R
 \name{check_no_of_tasks}
 \alias{check_no_of_tasks}
-\title{FUNCTION_TITLE}
+\title{check number of running tasks}
 \usage{
 check_no_of_tasks(task_regex = "rsession\\\\.exe")
 }
 \arguments{
-\item{task_regex}{PARAM_DESCRIPTION, Default: 'rsession\.exe'}
+\item{task_regex}{regex pattern for task, Default: 'rsession\.exe'}
 }
 \value{
-OUTPUT_DESCRIPTION
+integer, number of tasks
 }
 \description{
-FUNCTION_DESCRIPTION
-}
-\details{
-DETAILS
+searches a sstring returned by the system command tasklist for a
+  task regex pattern. Returns the number of occurrences.
 }
 \examples{
-\dontrun{
-if(interactive()){
- #EXAMPLE1
- }
-}
+check_no_of_tasks()
 }

@@ -2,26 +2,20 @@
 % Please edit documentation in R/f_check.R
 \name{check_internet}
 \alias{check_internet}
-\title{FUNCTION_TITLE}
+\title{check for an internet connection}
 \usage{
 check_internet(url = "http://www.google.com")
 }
 \arguments{
-\item{url}{PARAM_DESCRIPTION, Default: 'http://www.google.com'}
+\item{url}{character vector, Default: 'http://www.google.com'}
 }
 \value{
-OUTPUT_DESCRIPTION
+logical
 }
 \description{
-FUNCTION_DESCRIPTION
-}
-\details{
-DETAILS
+checks for an internet connection by reading the first line of a
+  given url
 }
 \examples{
-\dontrun{
-if(interactive()){
- #EXAMPLE1
- }
-}
+check_internet()
 }

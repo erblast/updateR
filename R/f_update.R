@@ -1,4 +1,4 @@
-
+#' @importFrom utils choose.dir compareVersion install.packages installed.packages update.packages
 #' @import miniCRAN
 
 #' @title get R version from path
@@ -6,9 +6,9 @@
 #' @param path, Default Sys.getenv('R_HOME')
 #' @return character vector 'X.X.X'
 #' @examples
-#'
+#' \dontrun{
 #' get_Rversion_from_path()
-#'
+#'}
 #' @rdname get_Rversion_from_path
 get_Rversion_from_path = function( path = Sys.getenv('R_HOME') ){
 
@@ -269,7 +269,7 @@ update_from_old_inst = function( dir_ls = get_user_input() ){
 
     print( paste('archiving miniCRAN') )
 
-    path_miniCRAN_archive = paste0( 'c:/miniCRAN-',R_vers_old )
+    path_miniCRAN_archive = file.path( dirname(path_miniCRAN), paste0( 'miniCRAN-',R_vers_old ) )
 
     if( ! dir.exists(path_miniCRAN_archive) ){
 
@@ -428,9 +428,6 @@ update_new_inst = function( dir_ls = get_user_input() ){
 #' @param path path to miniCRAN repository
 #' @rdname miniCRAN_create
 #' @export
-#' @importFrom miniCRAN makeRepo
-#' @importFrom packrat repos_add repos_remove
-#' @importFrom stringr str_detect
 create_miniCRAN = function( overwrite = F
                             , path = 'c:/miniCRAN' ){
 
@@ -441,20 +438,25 @@ create_miniCRAN = function( overwrite = F
 
   if( dir.exists(path) & overwrite == F){
     stop('miniCRAN already exists, set overwrite = TRUE')
+  }else{
+    dir.create( path )
   }
 
   op = options()
 
   CRAN_repos = options('repos')[[1]]
+  CRAN_repos = CRAN_repos[ startsWith( CRAN_repos, 'http') ][1]
+
+  CRAN_repos = 'https://cran.rstudio.com'
 
   if( ! startsWith(CRAN_repos, prefix = 'http')  ){
-    stop( "{ options('repos')[[1]] } needs to point to an online repository " )
+    stop( paste( options('repos')[[1]], "no online CRAN repository found" ) )
   }
 
   pkg = installed.packages()[,1]
 
-  miniCRAN::makeRepo( pkg, path, repos, type = 'source')
-  miniCRAN::makeRepo( pkg, path, repos, type = 'win.binary')
+  miniCRAN::makeRepo( pkg, path, CRAN_repos, type = 'source')
+  miniCRAN::makeRepo( pkg, path, CRAN_repos, type = 'win.binary')
 
   options(op)
 

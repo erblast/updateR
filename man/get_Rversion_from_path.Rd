@@ -16,7 +16,7 @@ character vector 'X.X.X'
 R isntallation folder needs to have standard annotation R-X.X.X
 }
 \examples{
-
+\dontrun{
 get_Rversion_from_path()
-
+}
 }

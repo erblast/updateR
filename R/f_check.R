@@ -74,7 +74,8 @@ check_RStudio = function(){
 check_libPaths = function(){
 
   if( length( .libPaths() ) > 1 ){
-    stop( 'found more than one package installation folder, run update_from_old_inst()' )
+
+    stop( paste( 'found more than one package installation folder, run update_from_old_inst(), .libPaths():', .libPaths() ) )
   }
 
   if( .libPaths() != file.path( Sys.getenv( 'R_HoME'), 'library' ) ){

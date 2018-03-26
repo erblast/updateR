@@ -8,6 +8,7 @@ Description: This package offers functions to copy libraries and Rprofile.site s
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
-License: None
+License: GPL-3
 Imports:
   miniCRAN
+Suggests: testthat

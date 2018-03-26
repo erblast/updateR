@@ -2,23 +2,16 @@
 % Please edit documentation in R/f_check.R
 \name{check_RStudio}
 \alias{check_RStudio}
-\title{FUNCTION_TITLE}
+\title{check if RStudio is running}
 \usage{
 check_RStudio()
 }
 \value{
-OUTPUT_DESCRIPTION
+logical
 }
 \description{
-FUNCTION_DESCRIPTION
-}
-\details{
-DETAILS
+checks Sys.getenv("RSTUDIO") == "1"
 }
 \examples{
-\dontrun{
-if(interactive()){
- #EXAMPLE1
- }
-}
+check_RStudio()
 }

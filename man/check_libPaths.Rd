@@ -2,23 +2,19 @@
 % Please edit documentation in R/f_check.R
 \name{check_libPaths}
 \alias{check_libPaths}
-\title{FUNCTION_TITLE}
+\title{check .libPaths()}
 \usage{
 check_libPaths()
 }
 \value{
-OUTPUT_DESCRIPTION
+logical
 }
 \description{
-FUNCTION_DESCRIPTION
-}
-\details{
-DETAILS
+checks if .libPaths only points to one folder inside running R
+  installation. Will throw an error if this is not the case.
 }
 \examples{
 \dontrun{
-if(interactive()){
- #EXAMPLE1
- }
+check_libPaths()
 }
 }
