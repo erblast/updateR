@@ -2,14 +2,12 @@ Package: updateR
 Type: Package
 Title: Update R in a desktop and server environment
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: Bjoern Oettinghaus
-Description: This package offers functions to copy libraries and Rprofile.site settings of an old R 
-installation to a fresh installation and functions to maintain a miniCRAN repository that can be copied 
-to a server environment with no internet connection. Functions of this package should with some exception
-never run inside an RStudio IDE because it requires manipulations of package installations that are automatically
-loaded by RStudio. Packages stored in the user's HOME directory will be ignored and the HOME directory will
-be removed from .libPaths() by a statement inside Rprofile.site.
+Authors@R: person("Bjoern", "Oettinghaus", email = "bjoern.oettinghaus@gmail.com",
+  role = c("aut", "cre"))
+Description: This package offers functions to copy libraries and Rprofile.site settings of an old R installation to a fresh installation and functions to maintain a miniCRAN repository that can be copied to a server environment with no internet connection. Functions of this package should with some exception never run inside an RStudio IDE because it requires manipulations of package installations that are automatically loaded by RStudio. Packages stored in the user's HOME directory will be ignored and the HOME directory will be removed from .libPaths() by a statement inside Rprofile.site.
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 6.0.1
+License: None
+Imports:
+  miniCRAN

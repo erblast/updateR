@@ -1,5 +1,16 @@
 
-get_Rversion_from_path = function( path ){
+#' @import miniCRAN
+
+#' @title get R version from path
+#' @description R isntallation folder needs to have standard annotation R-X.X.X
+#' @param path, Default Sys.getenv('R_HOME')
+#' @return character vector 'X.X.X'
+#' @examples
+#'
+#' get_Rversion_from_path()
+#'
+#' @rdname get_Rversion_from_path
+get_Rversion_from_path = function( path = Sys.getenv('R_HOME') ){
 
   pos = regexec( 'R-\\d+\\.\\d+\\.\\d+', path )[[1]]
 
@@ -22,16 +33,45 @@ get_Rversion_from_path = function( path ){
   return(R_vers)
 }
 
+
+#' @title get user input necessary for update
+#' @description used by update_from_old_inst() and update_new()
+#' @return dir_ls list()
+#' \describe{
+#'   \item{path_new}{path of new R installation}
+#'   \item{path_old}{path of old R installation}
+#'   \item{path_miniCRAN}{path to miniCRAN repository}
+#'   \item{libs_new}{packages in new R installation}
+#'   \item{libs_old}{packages in old R installation}
+#'   \item{R_vers_run}{R version currently running}
+#'   \item{R_vers_new}{R version of new installation}
+#'   \item{R_vers_old}{R version of old installation}
+#'   \item{server}{ logical, is server environment}
+#'   \item{can_internet}{logical, has internet connection}
+#'   \item{miniCRAN}{logical, is miniCRAN supposed to be used}
+#' }
+#' @details DETAILS
+#' @examples
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @rdname get_user_input
 get_user_input = function(){
 
   # check internet ---------------------------------------------------------
   can_internet = check_internet()
 
   #get paths ---------------------------------------------------------------
-  path_new = choose.dir(caption = 'pick directory of new R installation')
+  path_new = choose.dir(caption = 'pick directory of new R installation'
+                        , default = Sys.getenv('R_HOME'))
+
   path_new = normalizePath(path_new)
 
-  path_old = choose.dir(caption = 'pick directory of old R installation', default = path_new)
+  path_old = choose.dir(caption = 'pick directory of old R installation'
+                        , default = path_new)
+
   path_old = normalizePath(path_old)
 
   print( 'Enter `d` if unsure about environment' )
@@ -102,6 +142,7 @@ get_user_input = function(){
   print( paste('running R version:', R_vers_run) )
   print( paste('server environment:', server) )
   print( paste('internet connection:', can_internet) )
+  print( paste('using miniCRAN:', miniCRAN) )
 
   # checks ------------------------------------------------------------------------
 
@@ -139,6 +180,13 @@ get_user_input = function(){
 
 }
 
+#' @title update new R installation based on old installation
+#' @description needs to run on old R version, copies all packages from old
+#'   installation, updates Rprofile.site and archives miniCRAN if run on server
+#'   environment.
+#' @param dir_ls list, Default: get_user_input()
+#' @rdname update_from_old_inst
+#' @export
 update_from_old_inst = function( dir_ls = get_user_input() ){
 
   path_new      = dir_ls$path_new
@@ -245,6 +293,23 @@ update_from_old_inst = function( dir_ls = get_user_input() ){
 }
 
 
+#' @title update new R installation
+#' @description update new R installation, update all packages from either CRAN
+#'   or miniCRAN. On desktop environment all packages not yet in miniCRAN are
+#'   added. On server environment all missing packages from miniCRAN which are
+#'   not yet installed will be installed.
+#' @param dir_ls PARAM_DESCRIPTION, Default: get_user_input()
+#' @return OUTPUT_DESCRIPTION
+#' @details DETAILS
+#' @examples
+#' \dontrun{
+#' if(interactive()){
+#'  #EXAMPLE1
+#'  }
+#' }
+#' @seealso \code{\link[miniCRAN]{pkgAvail}},\code{\link[miniCRAN]{addPackage}}
+#' @rdname update_new_inst
+#' @export
 update_new_inst = function( dir_ls = get_user_input() ){
 
   path_new      = dir_ls$path_new
@@ -306,38 +371,42 @@ update_new_inst = function( dir_ls = get_user_input() ){
 
   if( miniCRAN ){
 
+    miniCRAN_repos = c( miniCRAN = paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') ) )
+    CRAN_repos = repos[[1]]
+
     pkg_loc  = installed.packages()[,c(1,3)]
     pkg_loc  = as.data.frame(pkg_loc)
 
-    pkg_cran = miniCRAN::pkgAvail()[,c(1,2)]
+    pkg_cran = miniCRAN::pkgAvail( repos = miniCRAN_repos)[,c(1,2)]
     pkg_cran = as.data.frame(pkg_cran)
+    row.names(pkg_cran) <- NULL
 
-    pkg_add  = pkg_loc$Package[ ! pkg_loc$Package %in% pkg_cran$Package ]
+
 
     if( server == F ){
+
+      pkg_add = pkg_loc[ ! pkg_loc$Package %in% pkg_cran$Package,  ]
 
       # save options
       op = options()
 
-      CRAN_repos = repos[[1]]
-
       # set miniCRAN as only repository
-      miniCRAN_repos = c( miniCRAN = paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') ) )
-      options( repos = miniCRAN_repos )
-
 
       print('Adding packages to miniCRAN, will fail for packages not on CRAN such as packages included in base R')
 
       miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'win.binary', deps = F)
-      miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source' , deps = F)
+      miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source', deps = F)
 
-      options(op)
+      miniCRAN::updatePackages( path = path_miniCRAN, repos = CRAN_repos, ask = F )
 
-      print('miniCRAN has been updated. Copy paste miniCRAN directory to server')
+      print('miniCRAN has been updated. Copy paste miniCRAN directory to server, consider running update_from_old_inst() first, so old miniCRAN will be archived if applicable.')
 
     }
 
     if( server == T ){
+
+      # when adding missing packages ignore package version
+      pkg_add  = pkg_cran$Package[ ! pkg_cran$Package %in% pkg_loc$Package ]
 
       print( 'installing missing packages from miniCRAN' )
 
@@ -352,4 +421,42 @@ update_new_inst = function( dir_ls = get_user_input() ){
 }
 
 
+#' @title create fresh miniCRAN from scratch
+#' @description creates a fresh miniCRAN repository, usually not needed because
+#'   a miniCRAN is already in place
+#' @param overwrite Default: F
+#' @param path path to miniCRAN repository
+#' @rdname miniCRAN_create
+#' @export
+#' @importFrom miniCRAN makeRepo
+#' @importFrom packrat repos_add repos_remove
+#' @importFrom stringr str_detect
+create_miniCRAN = function( overwrite = F
+                            , path = 'c:/miniCRAN' ){
+
+
+  if( check_internet() == F ){
+    stop( 'internet connection needed to create miniCRAN repository')
+  }
+
+  if( dir.exists(path) & overwrite == F){
+    stop('miniCRAN already exists, set overwrite = TRUE')
+  }
+
+  op = options()
+
+  CRAN_repos = options('repos')[[1]]
+
+  if( ! startsWith(CRAN_repos, prefix = 'http')  ){
+    stop( "{ options('repos')[[1]] } needs to point to an online repository " )
+  }
+
+  pkg = installed.packages()[,1]
+
+  miniCRAN::makeRepo( pkg, path, repos, type = 'source')
+  miniCRAN::makeRepo( pkg, path, repos, type = 'win.binary')
+
+  options(op)
+
+}
 

@@ -1,5 +1,13 @@
 
 
+#' @title check number of running tasks
+#' @description searches a sstring returned by the system command tasklist for a
+#'   task regex pattern. Returns the number of occurrences.
+#' @param task_regex regex pattern for task, Default: 'rsession\.exe'
+#' @return integer, number of tasks
+#' @examples
+#' check_no_of_tasks()
+#' @rdname check_no_of_tasks
 check_no_of_tasks = function( task_regex = 'rsession\\.exe'){
 
   print( paste('checking number of running tasks', task_regex) )
@@ -17,6 +25,14 @@ check_no_of_tasks = function( task_regex = 'rsession\\.exe'){
 }
 
 
+#' @title check for an internet connection
+#' @description checks for an internet connection by reading the first line of a
+#'   given url
+#' @param url character vector, Default: 'http://www.google.com'
+#' @return logical
+#' @examples
+#' check_internet()
+#' @rdname check_internet
 check_internet <- function(url = "http://www.google.com") {
 
   print('checking for internet connection')
@@ -32,6 +48,12 @@ check_internet <- function(url = "http://www.google.com") {
 
 }
 
+#' @title check if RStudio is running
+#' @description checks Sys.getenv("RSTUDIO") == "1"
+#' @return logical
+#' @examples
+#' check_RStudio()
+#' @rdname check_RStudio
 check_RStudio = function(){
 
   print('check if Rstudio is running')
@@ -40,6 +62,15 @@ check_RStudio = function(){
 
 }
 
+#' @title check .libPaths()
+#' @description checks if .libPaths only points to one folder inside running R
+#'   installation. Will throw an error if this is not the case.
+#' @return logical
+#' @examples
+#' \dontrun{
+#' check_libPaths()
+#' }
+#' @rdname check_libPaths
 check_libPaths = function(){
 
   if( length( .libPaths() ) > 1 ){
