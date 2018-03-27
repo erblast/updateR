@@ -269,9 +269,9 @@ update_from_old_inst = function( dir_ls = get_user_input() ){
 
     print( paste('setting', path_miniCRAN, 'as only CRAN repository in Rprofile.site') )
 
-    append_string = paste0( 'options( repos = "'
-                           , c( miniCRAN = paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') ) )
-                           , '" )' )
+    append_string = paste0( 'options( repos = c( miniCRAN = "'
+                           ,  paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') )
+                           , '" ) )' )
 
     write( x = append_string
            , file = rprofile_new
@@ -357,7 +357,7 @@ update_new_inst = function( dir_ls = get_user_input()
 
   repos = getOption('repos')
   no_repos = length(repos)
-  miniCRAN_in_repos = 'miniCRAN' %in% names(repos)
+  miniCRAN_in_repos = grepl( 'miniCRAN', names(repos) )
 
   if( '@CRAN@' %in% repos ){
     repos[ repos == '@CRAN@' ] = CRAN_repos
@@ -387,9 +387,9 @@ update_new_inst = function( dir_ls = get_user_input()
 
   n_libs_new_after =  length( libs_new_after )
 
-  if( n_libs_new_before != n_libs_new_after ){
+  if( n_libs_new_before > n_libs_new_after ){
 
-    libs_diff = n_libs_new_before[ ! n_libs_new_before %in% n_libs_new_after ]
+    libs_diff = libs_new_before[ ! libs_new_before %in% libs_new_after ]
     libs_diff = paste( libs_diff, collapse = ', ')
 
     stop( paste( 'packages', libs_diff, 'seem to have been deleted during the update process') )
@@ -448,13 +448,13 @@ update_new_inst = function( dir_ls = get_user_input()
     }else{
 
       # when adding missing packages ignore package version
-      pkg_add  = pkg_cran$Package[ ! pkg_cran$Package %in% pkg_loc$Package ]
+      pkg_add  = pkg_CRAN$Package[ ! pkg_CRAN$Package %in% pkg_loc$Package ]
 
       print( 'installing missing packages from miniCRAN' )
 
-      install.packages(pkg_add$Package)
+      install.packages(pkg_add)
 
-      print( paste( length(pkg_add), 'packages installed') )
+      print( paste(  paste(pkg_add, collapse = ', '), 'installed') )
 
     }
 
