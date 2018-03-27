@@ -4,7 +4,8 @@
 \alias{check_no_of_tasks}
 \title{check number of running tasks}
 \usage{
-check_no_of_tasks(task_regex = "rsession\\\\.exe")
+check_no_of_tasks(task_regex = c("rsession\\\\.exe", "Rgui\\\\.exe",
+  "R\\\\.exe", "Rscript\\\\.exe", "Rcmd\\\\.exe"))
 }
 \arguments{
 \item{task_regex}{regex pattern for task, Default: 'rsession\.exe'}

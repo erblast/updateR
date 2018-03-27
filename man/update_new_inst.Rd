@@ -4,7 +4,8 @@
 \alias{update_new_inst}
 \title{update new R installation}
 \usage{
-update_new_inst(dir_ls = get_user_input())
+update_new_inst(dir_ls = get_user_input(),
+  CRAN_repos = "https://cran.rstudio.com")
 }
 \arguments{
 \item{dir_ls}{PARAM_DESCRIPTION, Default: get_user_input()}

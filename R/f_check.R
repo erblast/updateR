@@ -8,7 +8,11 @@
 #' @examples
 #' check_no_of_tasks()
 #' @rdname check_no_of_tasks
-check_no_of_tasks = function( task_regex = 'rsession\\.exe'){
+check_no_of_tasks = function( task_regex = c( 'rsession\\.exe'
+                                              , 'Rgui\\.exe'
+                                              , 'R\\.exe'
+                                              , 'Rscript\\.exe'
+                                              , 'Rcmd\\.exe' ) ){
 
   print( paste('checking number of running tasks', task_regex) )
 
@@ -16,11 +20,18 @@ check_no_of_tasks = function( task_regex = 'rsession\\.exe'){
 
   tasks = paste( tasks, collapse = '')
 
-  splits = strsplit(tasks, task_regex)[[1]]
+  results = c()
 
-  no_tasks = length( splits ) - 1
+  for( regex in task_regex){
 
-  return( no_tasks )
+    splits = strsplit(tasks, regex)[[1]]
+
+    no_tasks = length( splits ) - 1
+
+    results = c( results, no_tasks )
+  }
+
+  return( sum(results) )
 
 }
 

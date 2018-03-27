@@ -1,5 +1,4 @@
 #' @importFrom utils choose.dir compareVersion install.packages installed.packages update.packages
-#' @import miniCRAN
 
 #' @title get R version from path
 #' @description R isntallation folder needs to have standard annotation R-X.X.X
@@ -74,7 +73,7 @@ get_user_input = function(){
 
   path_old = normalizePath(path_old)
 
-  print( 'Enter `d` if unsure about environment' )
+  print( 'Enter `D` if unsure about environment' )
   input = readline( prompt = 'Server or Desktop environment ( S | D ):' )
 
   # server or desktop ------------------------------------------------------
@@ -151,15 +150,27 @@ get_user_input = function(){
   }
 
   if( length(libs_old) < length(libs_new) ){
-    stop('old R installation has fewer packages installed than new R installation')
+
+    diff_pkgs = paste( libs_new[ ! libs_new %in% libs_old ], collapse = ', ' )
+
+    print( 'more packages found in new installation than in old installation' )
+
+    print( paste( diff_pkgs, 'only found in new installation' ) )
+
+    abort = readline( 'Abort ( Y | N ) ')
+
+    if( abort == 'y' | abort == 'Y' ){
+      stop( 'aborted' )
+    }
+
   }
 
-  if( any( ! libs_new %in% libs_old ) ){
+  if( any( ! libs_old %in% libs_new ) ){
 
     libs_no_match = libs_new[ ! libs_new %in% libs_new ]
     libs_no_match = paste( libs_no_match, collapse = ', ')
 
-    stop( paste( libs_no_match, 'found in new installation but not in old installation') )
+    stop( paste( libs_no_match, 'found in old installation but not in new installation') )
   }
 
   # returns ------------------------------------------------------------------------
@@ -310,7 +321,8 @@ update_from_old_inst = function( dir_ls = get_user_input() ){
 #' @seealso \code{\link[miniCRAN]{pkgAvail}},\code{\link[miniCRAN]{addPackage}}
 #' @rdname update_new_inst
 #' @export
-update_new_inst = function( dir_ls = get_user_input() ){
+update_new_inst = function( dir_ls = get_user_input()
+                            , CRAN_repos = 'https://cran.rstudio.com' ){
 
   path_new      = dir_ls$path_new
   path_old      = dir_ls$path_old
@@ -324,9 +336,8 @@ update_new_inst = function( dir_ls = get_user_input() ){
   can_internet  = dir_ls$can_internet
   miniCRAN      = dir_ls$miniCRAN
 
-  # checks ------------------------------------------------------------------------
 
-  can_internet = check_internet()
+  # checks ------------------------------------------------------------------------
 
   check_libPaths()
 
@@ -334,13 +345,23 @@ update_new_inst = function( dir_ls = get_user_input() ){
     stop('do not run update_new_inst() from inside RStudio')
   }
 
-  if( check_no_of_tasks() > 1 ){
-    stop( paste(check_no_of_tasks(), 'Rsessions are currently running. You can only have on Rsession running.') )
+  no_running_R_tasks = check_no_of_tasks()
+
+  if( no_running_R_tasks > 1 ){
+    stop( paste( no_running_R_tasks, 'Rsessions are currently running. You can only have on Rsession running.') )
   }
+
+  # in vanilla R no CRAN mirror is loaded it is set to @CRAN@ which results in
+  # a user prompt for selecting a mirror. Rstudio overwrites this behaviour.
+  # Here we have to overwrite ourselves
 
   repos = getOption('repos')
   no_repos = length(repos)
   miniCRAN_in_repos = 'miniCRAN' %in% names(repos)
+
+  if( '@CRAN@' %in% repos ){
+    repos[ repos == '@CRAN@' ] = CRAN_repos
+  }
 
   if( server & ( no_repos > 1 | miniCRAN_in_repos == F ) ){
     stop( paste('miniCRAN has to be only CRAN repository. repos:', repos ) )
@@ -360,12 +381,19 @@ update_new_inst = function( dir_ls = get_user_input() ){
 
   n_libs_new_before = length( libs_new )
 
-  update.packages( ask = F )
+  update.packages( ask = F, repos = repos[1] )
 
-  n_libs_new_after =  length( dir( file.path(path_new, 'library') ) )
+  libs_new_after = dir( file.path(path_new, 'library') )
+
+  n_libs_new_after =  length( libs_new_after )
 
   if( n_libs_new_before != n_libs_new_after ){
-    stop( 'some libraries were deleted during the update process')
+
+    libs_diff = n_libs_new_before[ ! n_libs_new_before %in% n_libs_new_after ]
+    libs_diff = paste( libs_diff, collapse = ', ')
+
+    stop( paste( 'packages', libs_diff, 'seem to have been deleted during the update process') )
+
   }else{
     print( paste( 'update from', repos[1], 'successfull' ))
   }
@@ -373,6 +401,12 @@ update_new_inst = function( dir_ls = get_user_input() ){
   # miniCRAN ----------------------------------------------------------------------------------
 
   if( miniCRAN ){
+
+    # updateR does not import miniCRAN because it loads igraph by default
+    # therefore we specifically load miniCRAN here and then unload it when
+    # we are done.
+
+    require(miniCRAN)
 
     miniCRAN_repos = c( miniCRAN = paste0('file:///', normalizePath( path_miniCRAN, winslash = '/') ) )
     CRAN_repos = repos[[1]]
@@ -390,12 +424,15 @@ update_new_inst = function( dir_ls = get_user_input() ){
 
     if( server == F ){
 
+      # get local packages not in miniCRAN (standard library packages + none CRAN packages + new packages)
       pkg_add = pkg_loc[ ! pkg_loc$Package %in% pkg_miniCRAN$Package,  ]
-      pkg_add = pkg_add[ pkg_add %in% pkg_CRAN$Package ]
+
+      # only add packages available on CRAN (new packages)
+      pkg_add = pkg_add[ pkg_add$Package %in% pkg_CRAN$Package, ]
 
       if( nrow(pkg_add) > 0 ){
 
-        print('Adding packages to miniCRAN')
+        print( paste('Adding', paste( pkg_add$Package, collapse = ', ' ),'to miniCRAN') )
 
         miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'win.binary', deps = F)
         miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source', deps = F)
@@ -408,9 +445,7 @@ update_new_inst = function( dir_ls = get_user_input() ){
         print('miniCRAN is already up-to-date')
       }
 
-    }
-
-    if( server == T ){
+    }else{
 
       # when adding missing packages ignore package version
       pkg_add  = pkg_cran$Package[ ! pkg_cran$Package %in% pkg_loc$Package ]
@@ -422,6 +457,8 @@ update_new_inst = function( dir_ls = get_user_input() ){
       print( paste( length(pkg_add), 'packages installed') )
 
     }
+
+    detach('package:miniCRAN', unload = T)
 
   }
 
@@ -436,7 +473,8 @@ update_new_inst = function( dir_ls = get_user_input() ){
 #' @rdname miniCRAN_create
 #' @export
 create_miniCRAN = function( overwrite = F
-                            , path = 'c:/miniCRAN' ){
+                            , path = 'c:/miniCRAN'
+                            , CRAN_repos = 'https://cran.rstudio.com' ){
 
 
   if( check_internet() == F ){
@@ -450,11 +488,6 @@ create_miniCRAN = function( overwrite = F
   }
 
   op = options()
-
-  CRAN_repos = options('repos')[[1]]
-  CRAN_repos = CRAN_repos[ startsWith( CRAN_repos, 'http') ][1]
-
-  CRAN_repos = 'https://cran.rstudio.com'
 
   if( ! startsWith(CRAN_repos, prefix = 'http')  ){
     stop( paste( options('repos')[[1]], "no online CRAN repository found" ) )

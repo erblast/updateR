@@ -4,7 +4,8 @@
 \alias{create_miniCRAN}
 \title{create fresh miniCRAN from scratch}
 \usage{
-create_miniCRAN(overwrite = F, path = "c:/miniCRAN")
+create_miniCRAN(overwrite = F, path = "c:/miniCRAN",
+  CRAN_repos = "https://cran.rstudio.com")
 }
 \arguments{
 \item{overwrite}{Default: F}
