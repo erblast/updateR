@@ -9,6 +9,7 @@
 #' get_Rversion_from_path()
 #'}
 #' @rdname get_Rversion_from_path
+#' @export
 get_Rversion_from_path = function( path = Sys.getenv('R_HOME') ){
 
   pos = regexec( 'R-\\d+\\.\\d+\\.\\d+', path )[[1]]
@@ -165,13 +166,6 @@ get_user_input = function(){
 
   }
 
-  if( any( ! libs_old %in% libs_new ) ){
-
-    libs_no_match = libs_new[ ! libs_new %in% libs_new ]
-    libs_no_match = paste( libs_no_match, collapse = ', ')
-
-    stop( paste( libs_no_match, 'found in old installation but not in new installation') )
-  }
 
   # returns ------------------------------------------------------------------------
 
@@ -357,7 +351,7 @@ update_new_inst = function( dir_ls = get_user_input()
 
   repos = getOption('repos')
   no_repos = length(repos)
-  miniCRAN_in_repos = grepl( 'miniCRAN', names(repos) )
+  miniCRAN_in_repos = grepl( 'miniCRAN', names(repos) )[1]
 
   if( '@CRAN@' %in% repos ){
     repos[ repos == '@CRAN@' ] = CRAN_repos
@@ -379,20 +373,32 @@ update_new_inst = function( dir_ls = get_user_input()
 
   print( paste( 'updating packages from', repos[1] ))
 
-  n_libs_new_before = length( libs_new )
+  libs_new_before = libs_new
 
   update.packages( ask = F, repos = repos[1] )
 
   libs_new_after = dir( file.path(path_new, 'library') )
 
-  n_libs_new_after =  length( libs_new_after )
+  libs_diff = libs_new_before[ ! libs_new_before %in% libs_new_after ]
 
-  if( n_libs_new_before > n_libs_new_after ){
+  if( length(libs_diff) > 0 ){
+
+    libs_diff_str = paste( libs_diff, collapse = ', ')
+
+    print( paste( 'packages', libs_diff_str, 'seem to have been deleted during the update process attempt to reinstall') )
+
+    install.packages( libs_diff, repos =  repos[1] )
+
+    libs_new_after = dir( file.path(path_new, 'library') )
 
     libs_diff = libs_new_before[ ! libs_new_before %in% libs_new_after ]
-    libs_diff = paste( libs_diff, collapse = ', ')
 
-    stop( paste( 'packages', libs_diff, 'seem to have been deleted during the update process') )
+    if( length( libs_diff ) ){
+
+      libs_diff_str = paste( libs_diff, collapse = ', ')
+
+      stop( paste( 'reinstallation of', libs_diff_str, 'failed' ) )
+    }
 
   }else{
     print( paste( 'update from', repos[1], 'successfull' ))
@@ -437,13 +443,18 @@ update_new_inst = function( dir_ls = get_user_input()
         miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'win.binary', deps = F)
         miniCRAN::addPackage( pkg_add$Package, path_miniCRAN, CRAN_repos, type = 'source', deps = F)
 
-        miniCRAN::updatePackages( path = path_miniCRAN, repos = CRAN_repos, ask = F )
+        package_str = paste( pkg_add$Package, collapse = ', ')
 
-        print('miniCRAN has been updated. Copy paste miniCRAN directory to server, consider running update_from_old_inst() on server before to archive miniCRAN.')
+        print( paste(package_str, 'have been added to miniCRAN') )
 
       }else{
-        print('miniCRAN is already up-to-date')
+        print('no packages have been added to miniCRAN')
       }
+
+      miniCRAN::updatePackages( path = path_miniCRAN, repos = CRAN_repos, ask = F )
+
+      print('miniCRAN updated, consider pasting miniCRAN to server, make sure to archive miniCRAN
+            when switching to new R version by running updateR::update_from_old_inst() first')
 
     }else{
 

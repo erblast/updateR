@@ -6,8 +6,11 @@
 #' @param task_regex regex pattern for task, Default: 'rsession\.exe'
 #' @return integer, number of tasks
 #' @examples
+#' \dontrun{
 #' check_no_of_tasks()
+#'}
 #' @rdname check_no_of_tasks
+#' @export
 check_no_of_tasks = function( task_regex = c( 'rsession\\.exe'
                                               , 'Rgui\\.exe'
                                               , 'R\\.exe'
@@ -44,6 +47,7 @@ check_no_of_tasks = function( task_regex = c( 'rsession\\.exe'
 #' @examples
 #' check_internet()
 #' @rdname check_internet
+#' @export
 check_internet <- function(url = "http://www.google.com") {
 
   print('checking for internet connection')
@@ -65,6 +69,7 @@ check_internet <- function(url = "http://www.google.com") {
 #' @examples
 #' check_RStudio()
 #' @rdname check_RStudio
+#' @export
 check_RStudio = function(){
 
   print('check if Rstudio is running')
@@ -82,6 +87,7 @@ check_RStudio = function(){
 #' check_libPaths()
 #' }
 #' @rdname check_libPaths
+#' @export
 check_libPaths = function(){
 
   if( length( .libPaths() ) > 1 ){

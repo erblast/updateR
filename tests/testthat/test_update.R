@@ -35,13 +35,11 @@ test_that('update'
   # the R sesion run by test seems to ignore Rprofile.site therefore we have
   # to set it manually
 
-  if( length( .libPaths() ) > 1 ){
+  if( length( .libPaths() ) != 1 ){
     .libPaths( c( .libPaths()[2] , '') )
   }
 
   # we can only test functions that can be run inside of RStudio.
-
-  expect_true( length( .libPaths() ) == 1 )
 
   create_miniCRAN( path = path_miniCRAN )
 

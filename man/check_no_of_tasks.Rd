@@ -18,5 +18,7 @@ searches a sstring returned by the system command tasklist for a
   task regex pattern. Returns the number of occurrences.
 }
 \examples{
+\dontrun{
 check_no_of_tasks()
+}
 }
