@@ -459,9 +459,12 @@ update_new_inst = function( dir_ls = get_user_input()
     }else{
 
       # when adding missing packages ignore package version
-      pkg_add  = pkg_CRAN$Package[ ! pkg_CRAN$Package %in% pkg_loc$Package ]
+      pkg_add = pkg_miniCRAN$Package[ ! pkg_miniCRAN$Package %in% pkg_loc$Package ]
+      pkg_add = as.vector(pkg_add)
 
       print( 'installing missing packages from miniCRAN' )
+
+      print( pkg_add )
 
       install.packages(pkg_add)
 
